@@ -8,39 +8,54 @@ public class AnimationToRagdoll : MonoBehaviour {
     [SerializeField] float respawnTime = 10f;
     [SerializeField] float forceAmount = 100;
     [SerializeField] float upwardsForce = 200;
+    [SerializeField] bool isKnockedAway;
     Rigidbody[] rigidbodies;
     public bool isRagdoll = false;
 
     void Start() {
         col = GetComponent<Collider>();
         rb = GetComponent<Rigidbody>();
+        isKnockedAway = false;
         rigidbodies = GetComponentsInChildren<Rigidbody>();
         ToggleRagdoll(true);
         
     }
 
- 
+    
+
+
+    private void OnTriggerEnter(Collider other) {
+
+    }
+
+    
+
 
     private void OnCollisionEnter(Collision other) {
-        
-        
-        if (!isRagdoll && other.gameObject.CompareTag("Player")) {
-            col.gameObject.transform.parent = transform;
-            ToggleRagdoll(false);
-            Knockback(other.transform);
-            StartCoroutine(GetBackUp());
+
+        if(other.gameObject.GetComponent<Collider>() && other.gameObject.CompareTag("PunchBox")) {
+            Debug.Log("Test");
         }
+
+        //if (!isRagdoll && other.gameObject.CompareTag("PunchBox") && !isKnockedAway) {
+        //    isKnockedAway = true;
+        //    ToggleRagdoll(false);
+        //    Knockback(other.transform);
+        //    StartCoroutine(GetBackUp());
+        //    Debug.Log("BANG!");
+        //}
     }
 
-    private void Knockback(Transform other) {
+    public void Knockback(Transform other) {
         foreach (Rigidbody rbBone in rigidbodies) {
             Vector3 forceDir = transform.position - other.position;
-            
-            rbBone.AddForce( (forceDir * forceAmount + Vector3.up * upwardsForce));
+
+            //rbBone.AddForce( (forceDir * forceAmount + Vector3.up * upwardsForce));
+            rbBone.AddForce(forceDir * forceAmount + Vector3.up * upwardsForce);
         }
     }
 
-    private void ToggleRagdoll(bool isAnimating) {
+    public void ToggleRagdoll(bool isAnimating) {
         isRagdoll = !isAnimating;
         
         col.enabled = isAnimating;
@@ -55,6 +70,10 @@ public class AnimationToRagdoll : MonoBehaviour {
         }
 
     }
+    public void RunCoroutine() {
+        StartCoroutine(GetBackUp());
+    }
+
 
     private IEnumerator GetBackUp() {
         yield return new WaitForSeconds(respawnTime);
