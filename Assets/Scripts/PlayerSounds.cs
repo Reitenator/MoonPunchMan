@@ -10,6 +10,15 @@ public class PlayerSounds : MonoBehaviour {
     [SerializeField]
     private AudioClip punchClip;
 
+    [SerializeField]
+    private AudioClip oofClip;
+
+    [SerializeField]
+    private AudioClip smackClip;
+
+    [SerializeField]
+    private AudioClip dashClip;
+
     private AudioSource audioSource;
 
     private void Awake() {
@@ -32,6 +41,17 @@ public class PlayerSounds : MonoBehaviour {
         AudioClip clip = punchClip;
         audioSource.pitch = 0.2f;
         audioSource.PlayOneShot(clip);
+    }
+
+    public void Oof() {
+        audioSource.PlayOneShot(oofClip);
+    }
+
+    public void Smack() {
+        audioSource.PlayOneShot(smackClip);
+    }
+    private void Dash() {
+        audioSource.PlayOneShot(dashClip);
     }
 
 

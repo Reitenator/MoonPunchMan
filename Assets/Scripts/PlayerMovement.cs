@@ -6,7 +6,8 @@ public enum PlayerState {
     moving,
     attacking,
     jumping,
-    dead
+    dead,
+    powerPunching
 }
 
 public class PlayerMovement : MonoBehaviour {
@@ -22,6 +23,7 @@ public class PlayerMovement : MonoBehaviour {
     public Transform cam;
     public float turnSmoothVelocity;
     public float turnSmoothTime = 0.1f;
+    public bool canPowerPunch;
     [SerializeField] float currentSpeed;
     [SerializeField] float speed;
     [SerializeField] bool canPunch;
@@ -37,6 +39,7 @@ public class PlayerMovement : MonoBehaviour {
 
     private void Start() {
         canPunch = true;
+        canDash = true;
         rb = GetComponent<Rigidbody>();
         currentState = PlayerState.moving;
 
@@ -44,15 +47,23 @@ public class PlayerMovement : MonoBehaviour {
 
     private void FixedUpdate() {
         MovementInput();
-        
-    }
-    private void Update() {
-        if (Input.GetButton("Fire1") && canPunch) {
+        if (Input.GetButton("Fire1") && canPunch && currentState != PlayerState.powerPunching && currentState != PlayerState.dead) {
             StartCoroutine(Punch());
-            
+
         }
+        if (Input.GetButton("Fire2") && canPowerPunch && currentState != PlayerState.powerPunching && currentState != PlayerState.dead) {
+            StartCoroutine(PowerPunch());
+        }
+
     }
 
+    private IEnumerator PowerPunch() {
+        canPowerPunch = false;
+        anim.SetBool("PowerPunching", true);
+        yield return new WaitForSeconds(1);
+        anim.SetBool("PowerPunching", false);
+        canPowerPunch = true;
+    }
 
     private IEnumerator Punch() {
         canPunch = false;
@@ -92,34 +103,36 @@ public class PlayerMovement : MonoBehaviour {
         moveDir = new Vector3(horizontal, 0f, vertical).normalized;
 
 
-
-        if (moveDir.magnitude >= 0.1f && currentState != PlayerState.dead) {
-            LimitBounds();
-            float targetAngle = Mathf.Atan2(moveDir.x, moveDir.z) * Mathf.Rad2Deg + cam.eulerAngles.y;
-            float smoothAngle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnSmoothVelocity, turnSmoothTime);
-            transform.rotation = Quaternion.Euler(0f, smoothAngle, 0f);
-            actualMoveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
+        if (currentState != PlayerState.powerPunching) { 
+            if (moveDir.magnitude >= 0.1f && currentState != PlayerState.dead) {
+                LimitBounds();
+                float targetAngle = Mathf.Atan2(moveDir.x, moveDir.z) * Mathf.Rad2Deg + cam.eulerAngles.y;
+                float smoothAngle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnSmoothVelocity, turnSmoothTime);
+                transform.rotation = Quaternion.Euler(0f, smoothAngle, 0f);
+                actualMoveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
             
-            //controller.Move(actualMoveDir.normalized * currentSpeed * Time.deltaTime);
-        }
-        float dashPower = 0;
-        if (moveDir.magnitude >= 0.1f && currentState != PlayerState.dead) {
-            anim.SetFloat("speed", 0.5f);
-            dashPower = 10;
-            if (Input.GetAxisRaw("run") > 0.1 || Input.GetKey(KeyCode.LeftShift)) {
-                dashPower = 20;
-                anim.SetFloat("speed", 1f);
-                currentSpeed = runSpeed;
-
+                //controller.Move(actualMoveDir.normalized * currentSpeed * Time.deltaTime);
             }
-            if (Input.GetButton("Dash") && currentState != PlayerState.attacking && canDash) {
-                StartCoroutine(DashAttack(dashPower));
-            }
-            rb.MovePosition(transform.position + actualMoveDir * currentSpeed * Time.fixedDeltaTime);
-        } else {
-            anim.SetFloat("speed", 0.0f);
-        }
+            float dashPower = 0;
+            if (moveDir.magnitude >= 0.1f && currentState != PlayerState.dead) {
+                anim.SetFloat("speed", 0.5f);
+                dashPower = 10;
+                if (Input.GetAxisRaw("run") > 0.1 || Input.GetKey(KeyCode.LeftShift)) {
+                    dashPower = 20;
+                    anim.SetFloat("speed", 1f);
+                    currentSpeed = runSpeed;
 
+                }
+                if (Input.GetButton("Dash") && currentState != PlayerState.attacking && canDash) {
+                    StartCoroutine(DashAttack(dashPower));
+                }
+                rb.MovePosition(transform.position + actualMoveDir * currentSpeed * Time.fixedDeltaTime);
+            } else {
+                anim.SetFloat("speed", 0.0f);
+            }
+        } 
+        
+        
 
 
     }
@@ -133,7 +146,7 @@ public class PlayerMovement : MonoBehaviour {
         yield return new WaitForSeconds(0.3f);
         currentState = PlayerState.moving;
         anim.SetBool("Dashing", false);
-        yield return new WaitForSeconds(1);
+        yield return new WaitForSeconds(0.8f);
         canDash = true;
     }
 
