@@ -3,9 +3,10 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public enum PlayerState {
-    walking,
+    moving,
     attacking,
-    jumping
+    jumping,
+    dead
 }
 
 public class PlayerMovement : MonoBehaviour {
@@ -14,7 +15,7 @@ public class PlayerMovement : MonoBehaviour {
     private Rigidbody rb;
     Vector3 moveDir;
 
-    [SerializeField] PlayerState currentState;
+    public PlayerState currentState;
 
     public float walkSpeed = 5;
     public float runSpeed = 12;
@@ -23,7 +24,10 @@ public class PlayerMovement : MonoBehaviour {
     public float turnSmoothTime = 0.1f;
     [SerializeField] float currentSpeed;
     [SerializeField] float speed;
-    [SerializeField] bool canPunch;             
+    [SerializeField] bool canPunch;
+    [SerializeField] bool canDash;
+
+    public Transform movementBounds;
 
 
     Vector3 actualMoveDir;
@@ -34,7 +38,7 @@ public class PlayerMovement : MonoBehaviour {
     private void Start() {
         canPunch = true;
         rb = GetComponent<Rigidbody>();
-
+        currentState = PlayerState.moving;
 
     }
 
@@ -43,7 +47,7 @@ public class PlayerMovement : MonoBehaviour {
         
     }
     private void Update() {
-        if (Input.GetButtonDown("Fire1") && canPunch) {
+        if (Input.GetButton("Fire1") && canPunch) {
             StartCoroutine(Punch());
             
         }
@@ -56,13 +60,25 @@ public class PlayerMovement : MonoBehaviour {
         punchBoxAnim.SetTrigger("boxPunch");
         yield return new WaitForSeconds(0.3f);
         canPunch = true;
+        canDash = true;
     }
 
     //void PunchAway(GameObject otherObject) {
     //    if (otherObject.CompareTag("Enemy") && !otherObject.GetComponent<Collider>().isTrigger) ;
 
     //}
+    private void LimitBounds() {
+        float radius = 49;
+        Vector3 centerPosition = movementBounds.transform.localPosition;
 
+        float distance = Vector3.Distance(transform.position, centerPosition);
+        if (distance > radius) {
+            Vector3 fromOriginToObject = transform.position - centerPosition;
+            fromOriginToObject *= radius / distance;
+            transform.position = centerPosition + fromOriginToObject;
+        }
+
+    }
     
 
     private void MovementInput () {
@@ -77,8 +93,8 @@ public class PlayerMovement : MonoBehaviour {
 
 
 
-        if (moveDir.magnitude >= 0.1f) {
-
+        if (moveDir.magnitude >= 0.1f && currentState != PlayerState.dead) {
+            LimitBounds();
             float targetAngle = Mathf.Atan2(moveDir.x, moveDir.z) * Mathf.Rad2Deg + cam.eulerAngles.y;
             float smoothAngle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnSmoothVelocity, turnSmoothTime);
             transform.rotation = Quaternion.Euler(0f, smoothAngle, 0f);
@@ -86,12 +102,18 @@ public class PlayerMovement : MonoBehaviour {
             
             //controller.Move(actualMoveDir.normalized * currentSpeed * Time.deltaTime);
         }
-        
-        if (moveDir.magnitude >= 0.1f) {
+        float dashPower = 0;
+        if (moveDir.magnitude >= 0.1f && currentState != PlayerState.dead) {
             anim.SetFloat("speed", 0.5f);
-            if (Input.GetAxisRaw("run") > 0.1) {
+            dashPower = 10;
+            if (Input.GetAxisRaw("run") > 0.1 || Input.GetKey(KeyCode.LeftShift)) {
+                dashPower = 20;
                 anim.SetFloat("speed", 1f);
                 currentSpeed = runSpeed;
+
+            }
+            if (Input.GetButton("Dash") && currentState != PlayerState.attacking && canDash) {
+                StartCoroutine(DashAttack(dashPower));
             }
             rb.MovePosition(transform.position + actualMoveDir * currentSpeed * Time.fixedDeltaTime);
         } else {
@@ -102,6 +124,18 @@ public class PlayerMovement : MonoBehaviour {
 
     }
 
+    IEnumerator DashAttack(float dashPower) {
+        canDash = false;
+        currentState = PlayerState.attacking;
+        anim.SetBool("Dashing", true);
+        punchBoxAnim.SetTrigger("boxDash");
+        rb.AddRelativeForce(0, 0, dashPower, ForceMode.Impulse);
+        yield return new WaitForSeconds(0.3f);
+        currentState = PlayerState.moving;
+        anim.SetBool("Dashing", false);
+        yield return new WaitForSeconds(1);
+        canDash = true;
+    }
 
 
 }

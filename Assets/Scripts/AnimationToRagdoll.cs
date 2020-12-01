@@ -8,49 +8,24 @@ public class AnimationToRagdoll : MonoBehaviour {
     [SerializeField] float respawnTime = 10f;
     [SerializeField] float forceAmount = 100;
     [SerializeField] float upwardsForce = 200;
-    [SerializeField] bool isKnockedAway;
     Rigidbody[] rigidbodies;
     public bool isRagdoll = false;
 
     void Start() {
         col = GetComponent<Collider>();
         rb = GetComponent<Rigidbody>();
-        isKnockedAway = false;
         rigidbodies = GetComponentsInChildren<Rigidbody>();
+        
         ToggleRagdoll(true);
+
+        
         
     }
-
-    
-
-
-    private void OnTriggerEnter(Collider other) {
-
-    }
-
-    
-
-
-    private void OnCollisionEnter(Collision other) {
-
-        if(other.gameObject.GetComponent<Collider>() && other.gameObject.CompareTag("PunchBox")) {
-            Debug.Log("Test");
-        }
-
-        //if (!isRagdoll && other.gameObject.CompareTag("PunchBox") && !isKnockedAway) {
-        //    isKnockedAway = true;
-        //    ToggleRagdoll(false);
-        //    Knockback(other.transform);
-        //    StartCoroutine(GetBackUp());
-        //    Debug.Log("BANG!");
-        //}
-    }
+   
 
     public void Knockback(Transform other) {
         foreach (Rigidbody rbBone in rigidbodies) {
             Vector3 forceDir = transform.position - other.position;
-
-            //rbBone.AddForce( (forceDir * forceAmount + Vector3.up * upwardsForce));
             rbBone.AddForce(forceDir * forceAmount + Vector3.up * upwardsForce);
         }
     }
@@ -59,10 +34,20 @@ public class AnimationToRagdoll : MonoBehaviour {
         isRagdoll = !isAnimating;
         
         col.enabled = isAnimating;
-        
+
+
         foreach (Rigidbody ragdollBone in rigidbodies) {
-            ragdollBone.isKinematic = isAnimating;
+            if (ragdollBone.gameObject.GetInstanceID() != GetInstanceID()) {
+                ragdollBone.isKinematic = isAnimating;
+                ragdollBone.detectCollisions = !isAnimating;
+            }
+            
+
         }
+        rb.isKinematic = false;
+        rb.detectCollisions = true;
+        
+
         
         GetComponent<Animator>().enabled = isAnimating;
         if(isAnimating) {
